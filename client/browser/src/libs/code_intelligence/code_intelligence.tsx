@@ -19,7 +19,7 @@ import { render } from 'react-dom'
 import { animationFrameScheduler, BehaviorSubject, Observable, of, Subject, Subscription, Unsubscribable } from 'rxjs'
 import { filter, map, mergeMap, observeOn, withLatestFrom } from 'rxjs/operators'
 
-import { Environment } from '../../../../../shared/src/api/client/environment'
+import { Model } from '../../../../../shared/src/api/client/model'
 import { TextDocumentItem } from '../../../../../shared/src/api/client/types/textDocument'
 import { getModeFromPath } from '../../../../../shared/src/languages'
 import {
@@ -200,14 +200,14 @@ export interface FileInfo {
  */
 function initCodeIntelligence(
     codeHost: CodeHost,
-    environment: BehaviorSubject<Pick<Environment, 'roots' | 'visibleTextDocuments'>>
+    model: BehaviorSubject<Pick<Model, 'roots' | 'visibleTextDocuments'>>
 ): {
     hoverifier: Hoverifier
     controllers: Partial<Controllers>
 } {
     const { platformContext, extensionsController }: Partial<Controllers> =
         useExtensions && codeHost.getCommandPaletteMount
-            ? initializeExtensions(codeHost.getCommandPaletteMount, environment)
+            ? initializeExtensions(codeHost.getCommandPaletteMount, model)
             : {}
     const simpleProviderFns = extensionsController ? createLSPFromExtensions(extensionsController) : lspViaAPIXlang
 
@@ -330,14 +330,14 @@ export interface ResolvedCodeView extends CodeViewWithOutSelector {
 }
 
 function handleCodeHost(codeHost: CodeHost): Subscription {
-    const environmentSubject = new BehaviorSubject<Pick<Environment, 'roots' | 'visibleTextDocuments'>>({
+    const modelSubject = new BehaviorSubject<Pick<Model, 'roots' | 'visibleTextDocuments'>>({
         roots: null,
         visibleTextDocuments: null,
     })
     const {
         hoverifier,
         controllers: { platformContext, extensionsController },
-    } = initCodeIntelligence(codeHost, environmentSubject)
+    } = initCodeIntelligence(codeHost, modelSubject)
 
     const subscriptions = new Subscription()
 
@@ -408,7 +408,7 @@ function handleCodeHost(codeHost: CodeHost): Subscription {
                                 text: content!,
                             },
                         ]
-                        const roots: Environment['roots'] = [{ uri: toRootURI(info) }]
+                        const roots: Model['roots'] = [{ uri: toRootURI(info) }]
 
                         // When codeView is a diff, add BASE too.
                         if (baseContent! && info.baseRepoPath && info.baseCommitID && info.baseFilePath) {
@@ -454,7 +454,7 @@ function handleCodeHost(codeHost: CodeHost): Subscription {
                                 })
                         }
 
-                        environmentSubject.next({ roots, visibleTextDocuments })
+                        modelSubject.next({ roots, visibleTextDocuments })
                     }
 
                     const resolveContext: ContextResolver = ({ part }) => ({

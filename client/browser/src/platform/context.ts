@@ -2,12 +2,13 @@ import { throwError } from 'rxjs'
 import { mergeMap, take } from 'rxjs/operators'
 import { PlatformContext } from '../../../../shared/src/platform/context'
 import { mutateSettings, updateSettings } from '../../../../shared/src/settings/edit'
+import { LocalStorageSubject } from '../../../../shared/src/util/LocalStorageSubject'
 import storage from '../browser/storage'
 import { getContext } from '../shared/backend/context'
 import { requestGraphQL } from '../shared/backend/graphql'
 import { sendLSPHTTPRequests } from '../shared/backend/lsp'
 import { canFetchForURL, sourcegraphUrl } from '../shared/util/context'
-import { createMessageTransports } from './messageTransports'
+import { createExtensionHost } from './extensionHost'
 import { editClientSettings, settingsCascade, settingsCascadeRefreshes } from './settings'
 
 /**
@@ -19,7 +20,7 @@ export function createPlatformContext(): PlatformContext {
     sourcegraphLanguageServerURL.pathname = '.api/xlang'
 
     const context: PlatformContext = {
-        settingsCascade,
+        settings: settingsCascade, // TODO!4(sqs): rename to settings, remove global observable (probably)
         updateSettings: async (subject, edit) => {
             try {
                 await updateSettings(
@@ -56,7 +57,11 @@ export function createPlatformContext(): PlatformContext {
         forceUpdateTooltip: () => {
             // TODO(sqs): implement tooltips on the browser extension
         },
-        createMessageTransports,
+        createExtensionHost,
+        getScriptURLForExtension: bundleURL => bundleURL,
+        sourcegraphURL: sourcegraphUrl,
+        clientApplication: 'other',
+        traceExtensionHostCommunication: new LocalStorageSubject<boolean>('traceExtensionHostCommunication', false),
     }
     return context
 }

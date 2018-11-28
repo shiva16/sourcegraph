@@ -4,6 +4,6 @@
     "typeRoots": ["../node_modules/@types", "src/types"],
     "jsx": "react"
   },
-  "include": ["**/*"],
+  "include": ["**/*", "../shared/src/util/LocalStorageSubject.ts", "../client/browser/src/platform/extensionHost.ts"],
   "exclude": ["../node_modules"]
 }
