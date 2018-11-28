@@ -47,7 +47,7 @@ func UpdateUser(ctx context.Context, newOrUpdatedUser db.NewUser, externalAccoun
 			if !createIfNotExist {
 				return 0, "User account has not been created yet. A site admin may have to create one for you.", err
 			}
-			// user was not found and we should create a new one
+			// user not found and we should create a new one
 			return createUser(ctx, newOrUpdatedUser, externalAccount, data)
 		}
 	}

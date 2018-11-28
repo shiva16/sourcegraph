@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -39,7 +40,7 @@ func TestUpdateUser(t *testing.T) {
 		}
 	}
 
-	t.Run("new user, new external account", func(t *testing.T) {
+	t.Run("new user, new external account, createIfNotExist=true", func(t *testing.T) {
 		var calledCreateUserAndSave bool
 		mockUsersUpdate()
 		mockNewUser(t)
@@ -60,7 +61,25 @@ func TestUpdateUser(t *testing.T) {
 		}
 	})
 
-	t.Run("new user, existing external account", func(t *testing.T) {
+	t.Run("new user, new external account, createIfNotExist=false", func(t *testing.T) {
+		var calledCreateUserAndSave bool
+		mockUsersUpdate()
+		mockNewUser(t)
+		db.Mocks.ExternalAccounts.CreateUserAndSave = func(u db.NewUser, a extsvc.ExternalAccountSpec, d extsvc.ExternalAccountData) (createdUserID int32, err error) {
+			calledCreateUserAndSave = true
+			return wantUserID, nil
+		}
+		defer func() { db.Mocks = db.MockStores{} }()
+		_, _, err := UpdateUser(context.Background(), db.NewUser{Username: wantUsername}, extsvc.ExternalAccountSpec{}, extsvc.ExternalAccountData{}, false)
+		if !errcode.IsNotFound(err) {
+			t.Errorf("Expected \"not found\" error, but got %#v", err)
+		}
+		if calledCreateUserAndSave {
+			t.Error("calledCreateUserAndSave")
+		}
+	})
+
+	t.Run("new user, existing external account, createIfNotExist=true", func(t *testing.T) {
 		var calledCreateUserAndSave bool
 		mockUsersUpdate()
 		mockNewUser(t)
@@ -78,49 +97,71 @@ func TestUpdateUser(t *testing.T) {
 		}
 	})
 
-	t.Run("authed user, new external account", func(t *testing.T) {
-		var calledAssociateUserAndSave bool
-		mockUsersGetByID()
+	t.Run("new user, existing external account, createIfNotExist=false", func(t *testing.T) {
+		var calledCreateUserAndSave bool
 		mockUsersUpdate()
-		mockExistingUser(t)
-		db.Mocks.ExternalAccounts.AssociateUserAndSave = func(userID int32, a extsvc.ExternalAccountSpec, d extsvc.ExternalAccountData) error {
-			if userID != wantAuthedUserID {
-				t.Errorf("got %d, want %d", userID, wantAuthedUserID)
-			}
-			calledAssociateUserAndSave = true
-			return nil
+		mockNewUser(t)
+		db.Mocks.ExternalAccounts.CreateUserAndSave = func(u db.NewUser, a extsvc.ExternalAccountSpec, d extsvc.ExternalAccountData) (createdUserID int32, err error) {
+			calledCreateUserAndSave = true
+			return 0, errors.New("x")
 		}
 		defer func() { db.Mocks = db.MockStores{} }()
-		ctx := actor.WithActor(context.Background(), &actor.Actor{UID: wantAuthedUserID})
-		userID, _, err := UpdateUser(ctx, db.NewUser{Username: wantUsername}, extsvc.ExternalAccountSpec{}, extsvc.ExternalAccountData{}, true)
-		if err != nil {
-			t.Fatal(err)
+		_, _, err := UpdateUser(context.Background(), db.NewUser{Username: wantUsername}, extsvc.ExternalAccountSpec{}, extsvc.ExternalAccountData{}, false)
+		if !errcode.IsNotFound(err) {
+			t.Errorf("Expected \"not found\" error, but got %#v", err)
 		}
-		if userID != wantAuthedUserID {
-			t.Errorf("got %d, want %d", userID, wantUserID)
-		}
-		if !calledAssociateUserAndSave {
-			t.Error("!calledAssociateUserAndSave")
+		if calledCreateUserAndSave {
+			t.Error("calledCreateUserAndSave")
 		}
 	})
 
-	t.Run("authed user, existing (conflicting) external account", func(t *testing.T) {
-		var calledAssociateUserAndSave bool
-		mockUsersGetByID()
-		mockUsersUpdate()
-		mockExistingUser(t)
-		wantErr := errors.New("x")
-		db.Mocks.ExternalAccounts.AssociateUserAndSave = func(userID int32, a extsvc.ExternalAccountSpec, d extsvc.ExternalAccountData) error {
-			calledAssociateUserAndSave = true
-			return wantErr
-		}
-		defer func() { db.Mocks = db.MockStores{} }()
-		ctx := actor.WithActor(context.Background(), &actor.Actor{UID: wantAuthedUserID})
-		if _, _, err := UpdateUser(ctx, db.NewUser{Username: wantUsername}, extsvc.ExternalAccountSpec{}, extsvc.ExternalAccountData{}, true); err != wantErr {
-			t.Fatalf("got err %q, want %q", err, wantErr)
-		}
-		if !calledAssociateUserAndSave {
-			t.Error("!calledAssociateUserAndSave")
-		}
-	})
+	for _, createIfNotExist := range []bool{false, true} {
+		t.Run(fmt.Sprintf("existing user, new external account, createIfNotExist=%v", createIfNotExist), func(t *testing.T) {
+			var calledAssociateUserAndSave bool
+			mockUsersGetByID()
+			mockUsersUpdate()
+			mockExistingUser(t)
+			db.Mocks.ExternalAccounts.AssociateUserAndSave = func(userID int32, a extsvc.ExternalAccountSpec, d extsvc.ExternalAccountData) error {
+				if userID != wantAuthedUserID {
+					t.Errorf("got %d, want %d", userID, wantAuthedUserID)
+				}
+				calledAssociateUserAndSave = true
+				return nil
+			}
+			defer func() { db.Mocks = db.MockStores{} }()
+			ctx := actor.WithActor(context.Background(), &actor.Actor{UID: wantAuthedUserID})
+			userID, _, err := UpdateUser(ctx, db.NewUser{Username: wantUsername}, extsvc.ExternalAccountSpec{}, extsvc.ExternalAccountData{}, createIfNotExist)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if userID != wantAuthedUserID {
+				t.Errorf("got %d, want %d", userID, wantUserID)
+			}
+			if !calledAssociateUserAndSave {
+				t.Error("!calledAssociateUserAndSave")
+			}
+		})
+	}
+
+	for _, createIfNotExist := range []bool{false, true} {
+		t.Run(fmt.Sprintf("existing user, existing (conflicting) external account, createIfNotExist=%v", createIfNotExist), func(t *testing.T) {
+			var calledAssociateUserAndSave bool
+			mockUsersGetByID()
+			mockUsersUpdate()
+			mockExistingUser(t)
+			wantErr := errors.New("x")
+			db.Mocks.ExternalAccounts.AssociateUserAndSave = func(userID int32, a extsvc.ExternalAccountSpec, d extsvc.ExternalAccountData) error {
+				calledAssociateUserAndSave = true
+				return wantErr
+			}
+			defer func() { db.Mocks = db.MockStores{} }()
+			ctx := actor.WithActor(context.Background(), &actor.Actor{UID: wantAuthedUserID})
+			if _, _, err := UpdateUser(ctx, db.NewUser{Username: wantUsername}, extsvc.ExternalAccountSpec{}, extsvc.ExternalAccountData{}, createIfNotExist); err != wantErr {
+				t.Fatalf("got err %q, want %q", err, wantErr)
+			}
+			if !calledAssociateUserAndSave {
+				t.Error("!calledAssociateUserAndSave")
+			}
+		})
+	}
 }
