@@ -19,7 +19,7 @@ func init() {
 		pc *schema.BuiltinAuthProvider
 		pi auth.Provider
 	)
-	conf.Watch(func() {
+	go conf.Watch(func() {
 		mu.Lock()
 		defer mu.Unlock()
 
@@ -44,6 +44,6 @@ func init() {
 		auth.UpdateProviders(updates)
 		pc = newPC
 		pi = newPI
+		init = false
 	})
-	init = false
 }
