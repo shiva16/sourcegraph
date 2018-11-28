@@ -44,8 +44,9 @@ func parseProvider(p *schema.GitHubAuthProvider, sourceCfg schema.AuthProviders)
 		Callback: github.CallbackHandler(
 			&oauth2Cfg,
 			oauth.SessionIssuer(&sessionIssuerHelper{
-				CodeHost: codeHost,
-				clientID: p.ClientID,
+				CodeHost:    codeHost,
+				clientID:    p.ClientID,
+				allowSignup: p.AllowSignup,
 			}, sessionKey),
 			nil,
 		),

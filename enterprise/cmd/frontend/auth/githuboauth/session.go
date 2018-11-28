@@ -19,7 +19,8 @@ import (
 
 type sessionIssuerHelper struct {
 	*githubsvc.CodeHost
-	clientID string
+	clientID    string
+	allowSignup bool
 }
 
 func (s *sessionIssuerHelper) GetOrCreateUser(ctx context.Context, token *oauth2.Token) (actr *actor.Actor, safeErrMsg string, err error) {
@@ -47,7 +48,7 @@ func (s *sessionIssuerHelper) GetOrCreateUser(ctx context.Context, token *oauth2
 		ServiceID:   s.ServiceID(),
 		ClientID:    s.clientID,
 		AccountID:   strconv.FormatInt(derefInt64(ghUser.ID), 10),
-	}, data, true)
+	}, data, s.allowSignup)
 	if err != nil {
 		return nil, safeErrMsg, err
 	}
