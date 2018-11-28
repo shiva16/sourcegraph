@@ -55,7 +55,7 @@ func getOrCreateUser(ctx context.Context, p *provider, idToken *oidc.IDToken, us
 		UserClaims *userClaims    `json:"userClaims"`
 	}{IDToken: idToken, UserInfo: userInfo, UserClaims: claims})
 
-	userID, safeErrMsg, err := auth.CreateOrUpdateUser(ctx, db.NewUser{
+	userID, safeErrMsg, err := auth.UpdateUser(ctx, db.NewUser{
 		Username:        login,
 		Email:           email,
 		EmailIsVerified: email != "", // TODO(sqs): https://github.com/sourcegraph/sourcegraph/issues/10118
@@ -66,7 +66,7 @@ func getOrCreateUser(ctx context.Context, p *provider, idToken *oidc.IDToken, us
 		ServiceID:   pi.ServiceID,
 		ClientID:    pi.ClientID,
 		AccountID:   idToken.Subject,
-	}, data)
+	}, data, true)
 	if err != nil {
 		return nil, safeErrMsg, err
 	}

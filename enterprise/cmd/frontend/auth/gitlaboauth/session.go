@@ -36,7 +36,7 @@ func (s *sessionIssuerHelper) GetOrCreateUser(ctx context.Context, token *oauth2
 	data.SetAccountData(gUser)
 	data.SetAuthData(token)
 
-	userID, safeErrMsg, err := auth.CreateOrUpdateUser(ctx, db.NewUser{
+	userID, safeErrMsg, err := auth.UpdateUser(ctx, db.NewUser{
 		Username:        login,
 		Email:           gUser.Email,
 		EmailIsVerified: gUser.Email != "",
@@ -47,7 +47,7 @@ func (s *sessionIssuerHelper) GetOrCreateUser(ctx context.Context, token *oauth2
 		ServiceID:   s.ServiceID(),
 		ClientID:    s.clientID,
 		AccountID:   strconv.FormatInt(int64(gUser.ID), 10),
-	}, data)
+	}, data, true)
 	if err != nil {
 		return nil, safeErrMsg, err
 	}

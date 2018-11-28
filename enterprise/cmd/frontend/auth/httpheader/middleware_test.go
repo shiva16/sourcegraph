@@ -62,14 +62,14 @@ func TestMiddleware(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/", nil)
 		req.Header.Set(headerName, "alice")
 		var calledMock bool
-		auth.MockCreateOrUpdateUser = func(u db.NewUser, a extsvc.ExternalAccountSpec) (userID int32, err error) {
+		auth.MockUpdateUser = func(u db.NewUser, a extsvc.ExternalAccountSpec) (userID int32, err error) {
 			calledMock = true
 			if a.ServiceType == "http-header" && a.ServiceID == "" && a.ClientID == "" && a.AccountID == "alice" {
 				return 1, nil
 			}
 			return 0, fmt.Errorf("account %v not found in mock", a)
 		}
-		defer func() { auth.MockCreateOrUpdateUser = nil }()
+		defer func() { auth.MockUpdateUser = nil }()
 		handler.ServeHTTP(rr, req)
 		if got, want := rr.Body.String(), "user 1"; got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -96,7 +96,7 @@ func TestMiddleware(t *testing.T) {
 		req.Header.Set(headerName, "alice.zhao")
 		const wantNormalizedUsername = "alice-zhao"
 		var calledMock bool
-		auth.MockCreateOrUpdateUser = func(u db.NewUser, a extsvc.ExternalAccountSpec) (userID int32, err error) {
+		auth.MockUpdateUser = func(u db.NewUser, a extsvc.ExternalAccountSpec) (userID int32, err error) {
 			calledMock = true
 			if u.Username != wantNormalizedUsername {
 				t.Errorf("got %q, want %q", u.Username, wantNormalizedUsername)
@@ -106,7 +106,7 @@ func TestMiddleware(t *testing.T) {
 			}
 			return 0, fmt.Errorf("account %v not found in mock", a)
 		}
-		defer func() { auth.MockCreateOrUpdateUser = nil }()
+		defer func() { auth.MockUpdateUser = nil }()
 		handler.ServeHTTP(rr, req)
 		if got, want := rr.Body.String(), "user 1"; got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -150,14 +150,14 @@ func TestMiddleware_stripPrefix(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/", nil)
 		req.Header.Set(headerName, "accounts.google.com:alice")
 		var calledMock bool
-		auth.MockCreateOrUpdateUser = func(u db.NewUser, a extsvc.ExternalAccountSpec) (userID int32, err error) {
+		auth.MockUpdateUser = func(u db.NewUser, a extsvc.ExternalAccountSpec) (userID int32, err error) {
 			calledMock = true
 			if a.ServiceType == "http-header" && a.ServiceID == "" && a.ClientID == "" && a.AccountID == "alice" {
 				return 1, nil
 			}
 			return 0, fmt.Errorf("account %v not found in mock", a)
 		}
-		defer func() { auth.MockCreateOrUpdateUser = nil }()
+		defer func() { auth.MockUpdateUser = nil }()
 		handler.ServeHTTP(rr, req)
 		if got, want := rr.Body.String(), "user 1"; got != want {
 			t.Errorf("got %q, want %q", got, want)

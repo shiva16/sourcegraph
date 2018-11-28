@@ -103,7 +103,7 @@ func newOIDCIDServer(t *testing.T, code string, oidcProvider *schema.OpenIDConne
 
 	srv := httptest.NewServer(s)
 
-	auth.MockCreateOrUpdateUser = func(u db.NewUser, a extsvc.ExternalAccountSpec) (userID int32, err error) {
+	auth.MockUpdateUser = func(u db.NewUser, a extsvc.ExternalAccountSpec) (userID int32, err error) {
 		if a.ServiceType == "openidconnect" && a.ServiceID == oidcProvider.Issuer && a.ClientID == testClientID && a.AccountID == testOIDCUser {
 			return 123, nil
 		}
@@ -141,7 +141,7 @@ func TestMiddleware(t *testing.T) {
 
 	oidcIDServer, emailPtr := newOIDCIDServer(t, "THECODE", &mockGetProviderValue.config)
 	defer oidcIDServer.Close()
-	defer func() { auth.MockCreateOrUpdateUser = nil }()
+	defer func() { auth.MockUpdateUser = nil }()
 	mockGetProviderValue.config.Issuer = oidcIDServer.URL
 
 	if err := mockGetProviderValue.Refresh(context.Background()); err != nil {
@@ -320,7 +320,7 @@ func TestMiddleware_NoOpenRedirect(t *testing.T) {
 
 	oidcIDServer, _ := newOIDCIDServer(t, "THECODE", &mockGetProviderValue.config)
 	defer oidcIDServer.Close()
-	defer func() { auth.MockCreateOrUpdateUser = nil }()
+	defer func() { auth.MockUpdateUser = nil }()
 	mockGetProviderValue.config.Issuer = oidcIDServer.URL
 
 	if err := mockGetProviderValue.Refresh(context.Background()); err != nil {

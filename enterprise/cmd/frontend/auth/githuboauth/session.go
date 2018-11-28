@@ -36,7 +36,7 @@ func (s *sessionIssuerHelper) GetOrCreateUser(ctx context.Context, token *oauth2
 	var data extsvc.ExternalAccountData
 	data.SetAccountData(ghUser)
 	data.SetAuthData(token)
-	userID, safeErrMsg, err := auth.CreateOrUpdateUser(ctx, db.NewUser{
+	userID, safeErrMsg, err := auth.UpdateUser(ctx, db.NewUser{
 		Username:        login,
 		Email:           deref(ghUser.Email),
 		EmailIsVerified: deref(ghUser.Email) != "",
@@ -47,7 +47,7 @@ func (s *sessionIssuerHelper) GetOrCreateUser(ctx context.Context, token *oauth2
 		ServiceID:   s.ServiceID(),
 		ClientID:    s.clientID,
 		AccountID:   strconv.FormatInt(derefInt64(ghUser.ID), 10),
-	}, data)
+	}, data, true)
 	if err != nil {
 		return nil, safeErrMsg, err
 	}

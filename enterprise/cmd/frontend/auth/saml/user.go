@@ -93,7 +93,7 @@ func getOrCreateUser(ctx context.Context, info *authnResponseInfo) (_ *actor.Act
 		return nil, fmt.Sprintf("Error normalizing the username %q. See https://docs.sourcegraph.com/admin/auth/#username-normalization.", info.unnormalizedUsername), err
 	}
 
-	userID, safeErrMsg, err := auth.CreateOrUpdateUser(ctx, db.NewUser{
+	userID, safeErrMsg, err := auth.UpdateUser(ctx, db.NewUser{
 		Username:        username,
 		Email:           info.email,
 		EmailIsVerified: info.email != "", // TODO(sqs): https://github.com/sourcegraph/sourcegraph/issues/10118
@@ -102,6 +102,7 @@ func getOrCreateUser(ctx context.Context, info *authnResponseInfo) (_ *actor.Act
 	},
 		info.spec,
 		data,
+		true,
 	)
 	if err != nil {
 		return nil, safeErrMsg, err
