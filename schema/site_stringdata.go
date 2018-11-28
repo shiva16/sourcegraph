@@ -1163,7 +1163,7 @@ const SiteSchemaJSON = `{
         },
         "displayName": { "$ref": "#/definitions/AuthProviderCommon/properties/displayName" },
         "allowSignup": {
-          "description": "Allows new visitors to sign up for accounts via GitHub authentication. If false, users signing in via GitHub must have an existing Sourcegraph account, which will be linked to the GitHub identity using email comparison after sign-in.",
+          "description": "Allows new visitors to sign up for accounts via GitHub authentication. If false, users signing in via GitHub must have an existing Sourcegraph account, which will be linked to their GitHub identity after sign-in.",
           "default": false,
           "type": "boolean"
         }
