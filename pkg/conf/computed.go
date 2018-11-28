@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sourcegraph/sourcegraph/pkg/conf/confdb"
 	"github.com/sourcegraph/sourcegraph/pkg/env"
 	"github.com/sourcegraph/sourcegraph/schema"
 )
@@ -17,13 +18,32 @@ func init() {
 	if !IsValidDeployType(deployType) {
 		log.Fatalf("The 'DEPLOY_TYPE' environment variable is invalid. Expected one of: %q, %q, %q. Got: %q", DeployCluster, DeployDocker, DeployDev, deployType)
 	}
+	switch {
+	case IsDev(deployType):
+		confdb.SetDefaultConfigs(
+			defaultDevAndTestingConfiguration.Core,
+			defaultDevAndTestingConfiguration.Site,
+		)
+	case IsDeployTypeDockerContainer(deployType):
+		confdb.SetDefaultConfigs(
+			defaultClusterConfiguration.Core,
+			defaultClusterConfiguration.Site,
+		)
+	case IsDeployTypeCluster(deployType):
+		confdb.SetDefaultConfigs(
+			defaultClusterConfiguration.Core,
+			defaultClusterConfiguration.Site,
+		)
+	default:
+		panic("deploy type did not register default configuration")
+	}
 }
 
 const defaultHTTPStrictTransportSecurity = "max-age=31536000" // 1 year
 
 // HTTPStrictTransportSecurity returns the value of the Strict-Transport-Security HTTP header to set.
 func HTTPStrictTransportSecurity() string {
-	switch v := Get().HttpStrictTransportSecurity.(type) {
+	switch v := Get().Core.HttpStrictTransportSecurity.(type) {
 	case string:
 		return v
 	case bool:
@@ -193,7 +213,7 @@ func IsValidDeployType(deployType string) bool {
 
 // UpdateChannel tells the update channel. Default is "release".
 func UpdateChannel() string {
-	channel := GetTODO().UpdateChannel
+	channel := GetTODO().Core.UpdateChannel
 	if channel == "" {
 		return "release"
 	}

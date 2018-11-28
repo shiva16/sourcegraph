@@ -159,13 +159,15 @@ func serveReposInventory(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func serveConfigurationRawJSON(w http.ResponseWriter, r *http.Request) error {
-	rawJSON := globals.ConfigurationServerFrontendOnly.Raw()
-	err := json.NewEncoder(w).Encode(rawJSON)
+func serveConfiguration(w http.ResponseWriter, r *http.Request) error {
+	raw, err := globals.DBConfigurationSource.Read(r.Context())
+	if err != nil {
+		return err
+	}
+	err = json.NewEncoder(w).Encode(raw)
 	if err != nil {
 		return errors.Wrap(err, "Encode")
 	}
-
 	return nil
 }
 
