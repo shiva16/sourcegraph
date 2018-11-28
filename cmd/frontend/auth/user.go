@@ -37,18 +37,23 @@ func UpdateUser(ctx context.Context, newOrUpdatedUser db.NewUser, externalAccoun
 			safeErrMsg = "Unexpected error associating the external account with your Sourcegraph user. The most likely cause for this problem is that another Sourcegraph user is already linked with this external account. A site admin or the other user can unlink the account to fix this problem."
 			return 0, safeErrMsg, err
 		}
+	} else if !createIfNotExist {
+		user, err := db.Users.GetByVerifiedEmail(ctx, newOrUpdatedUser.Email)
+		if err != nil {
+			return 0, "User account has not been created yet. A site admin may need to create one for you.", err
+		}
+		if err := db.ExternalAccounts.AssociateUserAndSave(ctx, user.ID, externalAccount, data); err != nil {
+			safeErrMsg = "Unexpected error associating the external account with your Sourcegraph user. The most likely cause for this problem is that another Sourcegraph user is already linked with this external account. A site admin or the other user can unlink the account to fix this problem."
+			return 0, safeErrMsg, err
+		}
+		userID = user.ID
 	} else {
 		userID, err = db.ExternalAccounts.LookupUserAndSave(ctx, externalAccount, data)
-		if err != nil {
-			if !errcode.IsNotFound(err) {
-				return 0, "Unexpected error looking up the Sourcegraph user account associated with the external account. Ask a site admin for help.", err
-			}
-			// err is "not found"
-			if !createIfNotExist {
-				return 0, "User account has not been created yet. A site admin may have to create one for you.", err
-			}
-			// user not found and we should create a new one
+		if errcode.IsNotFound(err) {
 			return createUser(ctx, newOrUpdatedUser, externalAccount, data)
+		}
+		if err != nil {
+			return 0, "Unexpected error looking up the Sourcegraph user account associated with the external account. Ask a site admin for help.", err
 		}
 	}
 
